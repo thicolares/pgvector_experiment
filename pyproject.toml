@@ -1,7 +1,12 @@
 [project]
 name = "pgvector-experiment"
 version = "0.1.0"
-description = "Add your description here"
+description = "PostgreSQL pgvector embeddings experiment"
 readme = "README.md"
-requires-python = ">=3.13"
-dependencies = []
+requires-python = ">=3.12"
+dependencies = [
+    "psycopg2-binary>=2.9.9",
+    "openai>=1.0.0",
+    "google-generativeai>=0.3.0",
+    "python-dotenv>=1.0.0",
+]
