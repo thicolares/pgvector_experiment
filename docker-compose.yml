@@ -28,6 +28,7 @@ services:
     environment:
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      EMBEDDING_SERVICE: ${EMBEDDING_SERVICE:-openai}
       DATABASE_URL: postgresql://${POSTGRES_USER:-pgvector_user}:${POSTGRES_PASSWORD:-pgvector_password}@postgres:5432/pgvector_experiment
     volumes:
       - .:/app

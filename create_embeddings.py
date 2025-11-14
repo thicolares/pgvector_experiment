@@ -35,15 +35,13 @@ def create_embedding(doc_content, service="openai"):
             contents=doc_content,
             config=types.EmbedContentConfig(output_dimensionality=1536),
         )
-        
+
         return result.embeddings[0].values
 
     raise ValueError(f"Unsupported service: {service}")
 
 
 def create_embeddings():
-    # Load OpenAI API key
-
     # Connect to PostgreSQL database
     conn = psycopg2.connect(os.getenv("DATABASE_URL"))
 
@@ -51,18 +49,25 @@ def create_embeddings():
     cur = conn.cursor()
     cur.execute("SELECT id, content FROM documents")
     documents = cur.fetchall()
-    
-    embedding_service = psycopg2.connect(os.getenv("EMBEDDING_SERVICE"))
+
+    embedding_service = os.getenv("EMBEDDING_SERVICE")
 
     # Process and store embeddings in the database
     for doc_id, doc_content in documents:
-        embedding = create_embedding(doc_content, embedding_service)
-        cur.execute(
-            "INSERT INTO document_embeddings (id, embedding) VALUES (%s, %s);",
-            (doc_id, embedding),
-        )
-        conn.commit()
+        try:
+            embedding = create_embedding(doc_content, embedding_service)
+            cur.execute(
+                "INSERT INTO document_embeddings (id, embedding) VALUES (%s, %s);",
+                (doc_id, embedding),
+            )
+            print(f"Processed document ID: {doc_id}")
+        except psycopg2.Error as e:
+            print(f"SQL Error for document ID {doc_id}: {e}")
+            conn.rollback()
+        except Exception as e:
+            print(f"Error processing document ID {doc_id}: {e}")
     # Commit and close the database connection
+    print("Committing changes to the database...")
     conn.commit()
 
 

@@ -35,7 +35,7 @@ def query_embeddings():
     SELECT title, content
     FROM document_embeddings
     JOIN documents USING (id)
-    WHERE embedding <-> (SELECT embedding FROM pgv) < 0.3;"""
+    WHERE embedding <-> (SELECT embedding FROM pgv) < 0.5;"""
     cur.execute(query)
     # Fetch results
     results = cur.fetchall()
