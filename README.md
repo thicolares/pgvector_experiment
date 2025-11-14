@@ -62,6 +62,20 @@ This will:
 - Create the `pgvector_experiment` database
 - Set up persistent storage for PostgreSQL data
 
+To tail the logs to monitor the startup process:
+
+```bash
+docker compose logs -f
+```
+
+To start fresh with updated `init.sql`:
+
+```bash
+docker compose down -v
+docker compose build --no-cache postgres
+docker compose up -d --build
+```
+
 ### 4. Verify Services are Running
 
 ```bash

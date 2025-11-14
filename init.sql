@@ -1,33 +1,37 @@
--- Create database
-CREATE DATABASE pgvector_experiment;
-
--- Connect to the database
-\c pgvector_experiment
+-- Database pgvector_experiment is automatically created by POSTGRES_DB env var
 
 -- Enable pgvector extension
+-- This command stores the vector extension metadata in the database,
+-- like data types and functions definitions and C code references.
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Create a sample table for embeddings
+-- Create a sample table for documents
+CREATE TABLE IF NOT EXISTS documents (
+    id int PRIMARY KEY,
+    title text NOT NULL,
+    content TEXT NOT NULL
+);
+
+-- Create document_embeddings table
 -- TODO: Adjust the vector dimension based on your embedding model
 -- OpenAI text-embedding-ada-002: 1536 dimensions
 -- OpenAI text-embedding-3-small: 1536 dimensions
 -- OpenAI text-embedding-3-large: 3072 dimensions
-CREATE TABLE IF NOT EXISTS embeddings (
-    id SERIAL PRIMARY KEY,
-    text TEXT NOT NULL,
-    vector vector(1536),  -- Adjust dimension as needed
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+CREATE TABLE IF NOT EXISTS document_embeddings (
+    id int PRIMARY KEY,
+    embedding vector(1536) NOT NULL -- Adjust dimension as needed
 );
 
--- Create an index for faster similarity searches
+-- Let’s index our data using the HNSW index
 -- Using HNSW (Hierarchical Navigable Small World) algorithm
-CREATE INDEX IF NOT EXISTS embeddings_vector_idx ON embeddings 
-USING hnsw (vector vector_cosine_ops);
+-- Records that this index uses hnsw + vector_l2_ops
+-- Stores metadata in pg_index and pg_class
+CREATE INDEX IF NOT EXISTS document_embeddings_embedding_idx ON document_embeddings
+USING hnsw (embedding vector_l2_ops);
 
--- TODO: Add your custom initialization queries below
--- Example: Insert sample data, create additional tables, etc.
+-- Insert documents into documents table
+INSERT INTO documents VALUES ('1', 'pgvector', 'pgvector is a PostgreSQL extension that provides support for vector similarity search and nearest neighbor search in SQL.');
+INSERT INTO documents VALUES ('2', 'pg_similarity', 'pg_similarity is a PostgreSQL extension that provides similarity and distance operators for vector columns.');
+INSERT INTO documents VALUES ('3', 'pg_trgm', 'pg_trgm is a PostgreSQL extension that provides functions and operators for determining the similarity of alphanumeric text based on trigram matching.');
+INSERT INTO documents VALUES ('4', 'pg_prewarm', 'pg_prewarm is a PostgreSQL extension that provides functions for prewarming relation data into the PostgreSQL buffer cache.');
 
--- Grant privileges to the application user
-GRANT ALL PRIVILEGES ON DATABASE pgvector_experiment TO :POSTGRES_USER;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO :POSTGRES_USER;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO :POSTGRES_USER;

@@ -10,7 +10,7 @@ from db import create_embeddings, query_embeddings
 
 def main():
     parser = argparse.ArgumentParser(
-        description="pgvector embeddings experiment - Create and query vector embeddings"
+        description="pgvector experiment - Create and query vector embeddings"
     )
     parser.add_argument(
         "operation",
