@@ -3,12 +3,9 @@
     <img src="pgvector_experiment.png" alt="pgvector Experiment Logo" width="200" height="200">
 </div>
 
-
-
-
 # `pgvector` Experiment
 
-A simple PostgreSQL [`pgvector`](https://github.com/pgvector/pgvector) experiment project for creating and querying vector embeddings using OpenAI or Google Gemini APIs.
+A simple PostgreSQL [`pgvector`](https://github.com/pgvector/pgvector) experiment project for storing and querying vector embeddings created using OpenAI or Google Gemini.
 
 ## Prerequisites
 
@@ -16,16 +13,16 @@ Ensure you have the following installed on your machine:
 
 - **Docker** (version 20.10 or higher) with **Docker Compose** plugin
 
-## Quick Start
+## Quick start
 
-### 1. Clone and Setup
+### 1. Clone and setup
 
 ```bash
 git clone git@github.com:thicolares/pgvector_experiment.git
 cd pgvector_experiment
 ```
 
-### 2. Configure Environment Variables
+### 2. Configure environment variables
 
 Copy the example environment file and update it with your API keys:
 
@@ -33,22 +30,9 @@ Copy the example environment file and update it with your API keys:
 cp .env.example .env
 ```
 
-Edit the `.env` file and add your API keys:
+Edit the `.env` file and add your API keys.
 
-```bash
-# Required: Add your OpenAI API key
-OPENAI_API_KEY=sk-your-actual-openai-api-key
-
-# Required: Add your Gemini API key
-GEMINI_API_KEY=your-actual-gemini-api-key
-
-# Optional: Customize PostgreSQL credentials (defaults provided)
-POSTGRES_USER=pgvector_user
-POSTGRES_PASSWORD=pgvector_password
-POSTGRES_PORT=5432
-```
-
-### 3. Start the Services
+### 3. Start the services
 
 Build and start the Docker containers:
 
@@ -57,71 +41,61 @@ docker compose up -d --build
 ```
 
 This will:
-- Build a PostgreSQL container with pgvector extension
-- Build a Python container with `uv` package manager
-- Create the `pgvector_experiment` database
-- Set up persistent storage for PostgreSQL data
-
-To tail the logs to monitor the startup process:
-
-```bash
-docker compose logs -f
-```
-
-To start fresh with updated `init.sql`:
-
-```bash
-docker compose down -v
-docker compose build --no-cache postgres
-docker compose up -d --build
-```
-
-### 4. Verify Services are Running
-
-```bash
-docker compose ps
-```
-
-You should see both `pgvector_postgres` and `pgvector_python` containers running.
+- Build and run PostgreSQL with pgvector and Python with `uv`
+- Create the database, install pgvector extension, and initialize mock documents (see `init.sql`)
 
 ## Usage
 
-### Running Commands Inside the Container
+### 1. Create embeddings by running
 
-Execute Python scripts inside the container:
-
-```bash
-# Create embeddings
-docker compose exec python uv run main.py create --text "Your text here"
-
-# Query embeddings
-docker compose exec python uv run main.py query --text "Search query" --limit 5
+```
+docker compose exec python uv run create_embeddings.py                      
 ```
 
-### Running Commands from Host Machine
+For each document, this generates embeddings via external APIs and stores them as `pgvector` vectors in PostgreSQL.
 
-If you want to run commands directly on your host machine (after installing dependencies locally):
-
-```bash
-# Install dependencies with uv
-uv pip install -r pyproject.toml
-
-# Create embeddings
-uv run main.py create --text "Your text here"
-
-# Query embeddings
-uv run main.py query --text "Search query" --limit 5
+Expected default output:
+```
+Processed document ID: 1
+Processed document ID: 2
+Processed document ID: 3
+Processed document ID: 4
+Committing changes to the database...
 ```
 
-## Accessing PostgreSQL Database
+### 2. Query similar documents by running
 
-### From Host Machine
+```
+ docker compose exec python uv run query_similar_documents.py --threshold 0.5
+```
+
+This retrieves documents with embeddings similar to a sample embedding stored in the database. The `--threshold` parameter controls similarity sensitivity (lower = more similar). 0.0 is exact match, 1.0 is very dissimilar. Default is 0.5.
+
+Expected default output:
+```
+Using similarity threshold: 0.5
+(Change with --threshold X, default 0.5)
+
+Document title: pgvector
+Document text: pgvector is a PostgreSQL extension that provides support for vector similarity search and nearest neighbor search in SQL.
+
+Document title: pg_similarity
+Document text: pg_similarity is a PostgreSQL extension that provides similarity and distance operators for vector columns.
+
+Document title: pg_trgm
+Document text: pg_trgm is a PostgreSQL extension that provides functions and operators for determining the similarity of alphanumeric text based on trigram matching.
+
+```
+
+## Accessing PostgreSQL database
+
+### From host machine
 
 You can connect to the PostgreSQL database from your host machine using any PostgreSQL client:
 
 **Connection Details:**
-- **Host:** `localhost`
-- **Port:** `5432` (or the value of `POSTGRES_PORT` in your `.env` file)
+- **Host:** `0.0.0.0`
+- **Port:** `5433` (or the value of `POSTGRES_PORT` in your `.env` file)
 - **Database:** `pgvector_experiment`
 - **Username:** `pgvector_user` (or the value of `POSTGRES_USER`)
 - **Password:** `pgvector_password` (or the value of `POSTGRES_PASSWORD`)
@@ -129,32 +103,16 @@ You can connect to the PostgreSQL database from your host machine using any Post
 **Using psql command line:**
 
 ```bash
-psql -h localhost -p 5432 -U pgvector_user -d pgvector_experiment
+psql -h 0.0.0.0 -p 5433 -U pgvector_user -d pgvector_experiment
 ```
-
-**Connection String:**
-
-```
-postgresql://pgvector_user:pgvector_password@localhost:5432/pgvector_experiment
-```
-
-### From Inside Docker Network
-
-Other containers in the same Docker network can connect using:
-
-```
-postgresql://pgvector_user:pgvector_password@postgres:5432/pgvector_experiment
-```
-
-
 
 ## Development
 
-### Editing Code
+### Editing code
 
 Edit files on your host machine. Changes are immediately available in the container via volume mounting.
 
-### Installing New Dependencies
+### Installing new dependencies
 
 1. Add the dependency to `pyproject.toml`
 2. Rebuild the Python container:
@@ -163,13 +121,13 @@ Edit files on your host machine. Changes are immediately available in the contai
 docker compose up -d --build python
 ```
 
-Or install inside the running container:
+Or install inside the running container (ephemeral):
 
 ```bash
 docker compose exec python uv pip install package-name
 ```
 
-### Viewing Logs
+### Viewing logs
 
 ```bash
 # All services
@@ -180,6 +138,22 @@ docker compose logs -f postgres
 docker compose logs -f python
 ```
 
+### Fresh start
+
+```bash
+docker compose down -v
+docker compose build --no-cache
+docker compose up -d --build
+```
+
+### Verify services are running
+
+```bash
+docker compose ps                                                           
+NAME                IMAGE                          COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+pgvector_postgres   pgvector_experiment-postgres   "docker-entrypoint.s…"   postgres   20 minutes ago   Up 20 minutes (healthy)   0.0.0.0:5433->5432/tcp
+pgvector_python     pgvector_experiment-python     "tail -f /dev/null"      python     20 minutes ago   Up 19 minutes  
+```
 
 ## Contributing
 
@@ -197,7 +171,7 @@ For a detailed guide on contributing to GitHub projects, see the [GitHub Contrib
 
 ## Customization
 
-### Modify Vector Dimensions
+### Modify vector dimensions
 
 The default vector dimension is set to 1536 (OpenAI's embedding size). To change this:
 
@@ -212,25 +186,25 @@ The default vector dimension is set to 1536 (OpenAI's embedding size). To change
    docker compose up -d --build
    ```
 
-### Add Custom SQL Initialization
+### Add custom SQL initialization
 
 Edit `init.sql` to add your custom tables, indexes, or seed data.
 
 ## Cleanup
 
-### Stop Services
+### Stop services
 
 ```bash
 docker compose down
 ```
 
-### Remove All Data (including volumes)
+### Remove all data (including volumes)
 
 ```bash
 docker compose down -v
 ```
 
-### Remove All Images
+### Remove all images
 
 ```bash
 docker compose down --rmi all -v
@@ -238,6 +212,7 @@ docker compose down --rmi all -v
 
 ## Resources
 
+- Code inspired by [What is pgvector, and How Can It Help Your Vector Database?](https://www.enterprisedb.com/blog/what-is-pgvector)
 - [pgvector Documentation](https://github.com/pgvector/pgvector)
 - [OpenAI Embeddings API](https://platform.openai.com/docs/guides/embeddings)
 - [Google Gemini API](https://ai.google.dev/docs)
