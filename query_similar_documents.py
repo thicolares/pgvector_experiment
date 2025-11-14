@@ -1,6 +1,7 @@
 import psycopg2
 from dotenv import load_dotenv
 import os
+import argparse
 
 load_dotenv()
 
@@ -11,8 +12,12 @@ def query_embeddings():
     cur = conn.cursor()
 
     # Perform a similarity search to find documents similar to a given query document.
+    parser = argparse.ArgumentParser(description='Query similar documents using embeddings')
+    parser.add_argument('--threshold', type=float, default=0.5, help='Similarity threshold for document matching')
+    args = parser.parse_args()
+
     query = """
-    -- The query first fetches an embeddings vector for the document titled “pgvector”
+    -- The query first fetches an embeddings vector for the document titled "pgvector"
     -- and then uses the similarity search to get documents with similar content.
     WITH pgv AS (
         SELECT embedding
@@ -20,13 +25,13 @@ def query_embeddings():
         WHERE title = 'pgvector'
     )
     
-    -- Note the “<->” operator: that's where all the pgvector magic happens
+    -- Note the "<->" operator: that's where all the pgvector magic happens
     -- It's how we get the similarity between two vectors using our HNSW index.
     
     -- <-> - L2 distance (aka Euclidean distance)
     -- See other operators in the pgvector docs: https://github.com/pgvector/pgvector?tab=readme-ov-file#querying
     
-    -- The “0.5” is a similarity threshold that will be highly dependent on the
+    -- The "0.5" is a similarity threshold that will be highly dependent on the
     -- use case and requires fine-tuning in real-world applications.
     -- It means: return all vectors whose distance to the queried vector is less than 0.5
     -- Hence, 0.0 would be a perfect match, and larger values are less similar.
@@ -35,11 +40,20 @@ def query_embeddings():
     SELECT title, content
     FROM document_embeddings
     JOIN documents USING (id)
-    WHERE embedding <-> (SELECT embedding FROM pgv) < 0.5;"""
-    cur.execute(query)
+    WHERE embedding <-> (SELECT embedding FROM pgv) < %s;"""
+    
+    cur.execute(query, (args.threshold,))
     # Fetch results
     results = cur.fetchall()
     # Print results in a nice format
+    
+    print(f"Using similarity threshold: {args.threshold}")
+    print("(Change with --threshold X, default 0.5)\n")
+    
+    if not results:
+        print('No similar documents found.')
+        return
+    
     for doc_title, doc_content in results:
         print(f"Document title: {doc_title}")
         print(f"Document text: {doc_content}")
